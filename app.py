@@ -207,7 +207,59 @@ def upload_page():
 @app.route("/files")
 @login_required()
 def files_page():
-    return render_template("files.html", files=load_uploads())
+    files = load_uploads()
+
+    # Read query parameters
+    search = request.args.get("search", "").strip().lower()
+    file_type = request.args.get("type", "all").lower()
+
+    # -----------------------------
+    # SEARCH FILTER
+    # -----------------------------
+    if search:
+        files = [
+            f for f in files
+            if search in f["filename"].lower()
+            or any(search in tag.lower() for tag in f.get("tags", []))
+        ]
+
+    # -----------------------------
+    # TYPE FILTER
+    # -----------------------------
+    if file_type != "all":
+
+        def match_type(file):
+            name = file["filename"].lower()
+
+            if file_type == "pdf":
+                return name.endswith(".pdf")
+
+            if file_type == "image":
+                return any(name.endswith(ext) for ext in
+                           [".jpg", ".jpeg", ".png", ".gif"])
+
+            if file_type == "video":
+                return any(name.endswith(ext) for ext in
+                           [".mp4", ".mov", ".avi", ".mkv"])
+
+            if file_type == "doc":
+                return any(name.endswith(ext) for ext in
+                           [".doc", ".docx", ".txt", ".ppt", ".pptx", ".xls", ".xlsx"])
+
+            if file_type == "other":
+                return True  # Everything not matched above
+
+            return True
+
+        files = [f for f in files if match_type(f)]
+
+    # Render the student dashboard with filtered results
+    return render_template(
+        "student_dashboard.html",
+        files=files,
+        username=session["username"]
+    )
+
 
 
 # ---------- TEACHER FILE MANAGER ----------
