@@ -18,12 +18,12 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-key")
 
 # ======================================================
-# FIXED PATH CONFIG  (IMPORTANT FOR SAVING FILES)
+# PATH CONFIG (IMPORTANT FOR RENDER)
 # ======================================================
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 UPLOAD_RECORD = os.path.join(BASE_DIR, "uploads.json")
-AI_LOGS_RECORD = os.path.join(BASE_DIR, "ai_logs.json")
+AI_LOGS_RECORD = os.path.join(BASE_DIR, "ai_logs.json")  # used inside utils.ai_logs
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -135,8 +135,10 @@ def student_dashboard():
 @app.route("/dashboard/teacher")
 @login_required("Teacher")
 def teacher_dashboard():
-    return render_template("teacher_dashboard.html",
-                           username=session["username"])
+    return render_template(
+        "teacher_dashboard.html",
+        username=session["username"]
+    )
 
 
 # --------------------- ADMIN ---------------------
@@ -171,14 +173,15 @@ def chatbot():
 @app.post("/api/chat")
 @login_required()
 def api_chat():
-    q = request.get_json().get("message", "")
+    data = request.get_json() or {}
+    q = data.get("message", "")
     ans = ask_ai(q)
     save_ai_log(q, ans, session["username"])
     return {"answer": ans}
 
 
 # ======================================================
-# UPLOAD
+# UPLOAD (TEACHER)
 # ======================================================
 @app.route("/upload", methods=["GET", "POST"])
 @login_required("Teacher")
@@ -189,14 +192,21 @@ def upload_page():
             return render_template("upload.html", error="Select a file!")
 
         filename = secure_filename(file.filename)
+        if not filename:
+            return render_template("upload.html", error="Invalid filename.")
+
+        # Save temporarily to /uploads folder (local)
         temp_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(temp_path)
 
+        # Upload to S3 -> CloudFront
         s3_url = upload_file_with_metadata(temp_path, key=filename)
 
+        # AI tags + optional PDF summary
         tags = generate_ai_tags(filename)
         summary = summarize_pdf(temp_path) if filename.lower().endswith(".pdf") else None
 
+        # Save metadata to uploads.json
         records = load_uploads()
         records.append({
             "uploaded_by": session["username"],
@@ -207,14 +217,16 @@ def upload_page():
         })
         save_uploads(records)
 
+        # Remove local temp
         os.remove(temp_path)
+
         return render_template("upload_success.html", url=s3_url, tags=tags)
 
     return render_template("upload.html")
 
 
 # ======================================================
-# FILE SEARCH + FILTER
+# FILE SEARCH + FILTER (Student view)
 # ======================================================
 @app.route("/files")
 @login_required()
@@ -238,18 +250,25 @@ def files_page():
         def match(file):
             name = file["filename"].lower()
 
-            if file_type == "pdf": return name.endswith(".pdf")
-            if file_type == "image": return any(name.endswith(e) for e in [".jpg",".jpeg",".png",".gif"])
-            if file_type == "video": return any(name.endswith(e) for e in [".mp4",".mov",".avi",".mkv"])
-            if file_type == "doc": return any(name.endswith(e) for e in [".doc",".docx",".txt",".ppt",".pptx",".xls",".xlsx"])
+            if file_type == "pdf":
+                return name.endswith(".pdf")
+            if file_type == "image":
+                return any(name.endswith(e) for e in [".jpg", ".jpeg", ".png", ".gif"])
+            if file_type == "video":
+                return any(name.endswith(e) for e in [".mp4", ".mov", ".avi", ".mkv"])
+            if file_type == "doc":
+                return any(name.endswith(e) for e in [".doc", ".docx", ".txt", ".ppt", ".pptx", ".xls", ".xlsx"])
 
+            # "other" or unknown -> allow all
             return True
 
         files = [f for f in files if match(f)]
 
-    return render_template("student_dashboard.html",
-                           files=files,
-                           username=session["username"])
+    return render_template(
+        "student_dashboard.html",
+        files=files,
+        username=session["username"]
+    )
 
 
 # ======================================================
@@ -258,7 +277,7 @@ def files_page():
 @app.route("/teacher/files")
 @login_required("Teacher")
 def teacher_files():
-    mine = [f for f in load_uploads() if f["uploaded_by"] == session["username"]]
+    mine = [f for f in load_uploads() if f.get("uploaded_by") == session["username"]]
     return render_template("teacher_files.html", files=mine)
 
 
@@ -266,10 +285,14 @@ def teacher_files():
 @login_required("Teacher")
 def delete_teacher_file(filename):
     records = load_uploads()
-    records = [r for r in records
-               if not (r["filename"] == filename and r["uploaded_by"] == session["username"])]
+    records = [
+        r for r in records
+        if not (r["filename"] == filename and r.get("uploaded_by") == session["username"])
+    ]
 
+    # Delete from S3
     delete_file(filename)
+
     save_uploads(records)
     return redirect(url_for("teacher_files"))
 
@@ -277,13 +300,14 @@ def delete_teacher_file(filename):
 @app.post("/teacher/files/rename/<filename>")
 @login_required("Teacher")
 def rename_teacher_file(filename):
-    new_name = request.form.get("new_name").strip()
+    new_name = (request.form.get("new_name") or "").strip()
     if not new_name:
         return redirect(url_for("teacher_files"))
 
     records = load_uploads()
     for r in records:
-        if r["filename"] == filename and r["uploaded_by"] == session["username"]:
+        if r["filename"] == filename and r.get("uploaded_by") == session["username"]:
+            # Rename in S3
             rename_file(filename, new_name)
             r["filename"] = new_name
             r["tags"] = generate_ai_tags(new_name)
