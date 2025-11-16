@@ -1,6 +1,14 @@
 [
     {
         "uploaded_by": "div",
+        "filename": "3rd-semester-syllabus.pdf",
+        "url": "s3://e-learning-platform-files/3rd-semester-syllabus.pdf",
+        "tags": [
+                   
+        ]
+    },
+    {
+        "uploaded_by": "div",
         "filename": "c612d495-37d3-4a3e-ada3-a934256f5939.pdf",
         "url": "https://dbci5xyzb8tw6.cloudfront.net/c612d495-37d3-4a3e-ada3-a934256f5939.pdf",
         "tags": [
@@ -17,6 +25,24 @@
             "Coding"
         ]
     },
+    {
+        "uploaded_by": "div",
+        "filename": "D.jpg",
+        "url": "s3://e-learning-platform-files/D.jpg",
+        "tags": [
+                   
+        ]
+    },
+    
+      {
+        "uploaded_by": "div",
+        "filename": "Spidy",
+        "url": " s3://e-learning-platform-files/wallhaven-qzr8yq_2190x1232.png",
+        "tags": [
+                   
+        ]
+    },
+    s3://e-learning-platform-files/wallhaven-qzr8yq_2190x1232.png
     {
         "uploaded_by": "div",
         "filename": "e5c59a4e-ce44-432f-b8b3-abb0348168cf.pdf",
