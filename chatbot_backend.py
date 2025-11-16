@@ -4,14 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Load API key
-api_key = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
-
-# UNIVERSAL MODEL (works on Render + all API versions)
-MODEL_NAME = "models/gemini-1.0-pro"
-
-model = genai.GenerativeModel(MODEL_NAME)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 def ask_ai(question: str):
     if not question.strip():
@@ -22,4 +16,3 @@ def ask_ai(question: str):
         return response.text.strip()
     except Exception as e:
         return f"AI Error: {e}"
-
