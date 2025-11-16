@@ -20,7 +20,8 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-key")
 # ======================================================
 # PATH CONFIG (IMPORTANT FOR RENDER)
 # ======================================================
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 UPLOAD_RECORD = os.path.join(BASE_DIR, "uploads.json")
 AI_LOGS_RECORD = os.path.join(BASE_DIR, "ai_logs.json")  # used inside utils.ai_logs
