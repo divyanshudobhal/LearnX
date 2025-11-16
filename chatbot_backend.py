@@ -4,12 +4,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Load your API key
+# Load API key
 api_key = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=api_key)
 
-# Correct model path for v1beta API
-MODEL_NAME = "models/gemini-1.5-flash"
+# UNIVERSAL MODEL (works on Render + all API versions)
+MODEL_NAME = "models/gemini-1.0-pro"
 
 model = genai.GenerativeModel(MODEL_NAME)
 
@@ -22,3 +22,4 @@ def ask_ai(question: str):
         return response.text.strip()
     except Exception as e:
         return f"AI Error: {e}"
+
