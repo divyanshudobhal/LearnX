@@ -1,9 +1,8 @@
 import json
 import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-AI_LOGS_FILE = os.path.join(BASE_DIR, "ai_logs.json")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AI_LOG_FILE = os.path.join(BASE_DIR, "ai_logs.json")
 
 
 def load_ai_logs():
