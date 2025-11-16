@@ -19,7 +19,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-key")
 
 
 # ============================================
-# 🔹 UPLOAD RECORD STORAGE HELPERS
+# 🔹 FILE UPLOAD RECORD HELPERS
 # ============================================
 
 UPLOAD_RECORD = "uploads.json"
@@ -32,6 +32,34 @@ def load_uploads():
 
 def save_uploads(data):
     with open(UPLOAD_RECORD, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+# ============================================
+# 🔹 USER + AI LOG STORAGE HELPERS
+# ============================================
+
+USERS_RECORD = "users.json"
+AI_LOGS_RECORD = "ai_logs.json"
+
+def load_users():
+    if not os.path.exists(USERS_RECORD):
+        return []
+    with open(USERS_RECORD, "r") as f:
+        return json.load(f)
+
+def save_users(data):
+    with open(USERS_RECORD, "w") as f:
+        json.dump(data, f, indent=4)
+
+def load_ai_logs():
+    if not os.path.exists(AI_LOGS_RECORD):
+        return []
+    with open(AI_LOGS_RECORD, "r") as f:
+        return json.load(f)
+
+def save_ai_logs(data):
+    with open(AI_LOGS_RECORD, "w") as f:
         json.dump(data, f, indent=4)
 
 
@@ -137,15 +165,28 @@ def teacher_dashboard():
 @app.route("/dashboard/admin")
 @login_required("Admin")
 def admin_dashboard():
-    return render_template("admin_dashboard.html",
-                           username=session["username"])
+
+    users = load_users()
+    files = load_uploads()
+    ai_logs = load_ai_logs()
+
+    return render_template(
+        "admin_dashboard.html",
+        username=session["username"],
+        total_users=len(users),
+        total_files=len(files),
+        ai_queries=len(ai_logs),
+        users=users,
+        files=files,
+        ai_logs=ai_logs
+    )
 
 
 # ============================================
 # 🔹 CHATBOT
 # ============================================
 
-@app.route("/chatbot", methods=["GET"])
+@app.route("/chatbot")
 @login_required()
 def chatbot():
     return render_template("chatbot.html")
@@ -156,7 +197,18 @@ def chatbot():
 def api_chat():
     data = request.get_json()
     question = data.get("message", "")
+
     answer = ask_ai(question)
+
+    # Save AI log
+    logs = load_ai_logs()
+    logs.append({
+        "user": session["username"],
+        "question": question,
+        "answer": answer
+    })
+    save_ai_logs(logs)
+
     return {"answer": answer}
 
 
@@ -175,19 +227,19 @@ def upload_page():
 
         filename = secure_filename(file.filename)
 
-        # Temporary save before uploading to S3
+        # temporary local save
         temp_folder = "uploads"
         os.makedirs(temp_folder, exist_ok=True)
         temp_path = os.path.join(temp_folder, filename)
         file.save(temp_path)
 
-        # Upload to S3 → CloudFront URL
+        # Upload to S3 -> CloudFront URL
         s3_url = upload_file_with_metadata(temp_path, key=filename)
 
         # AI tags
         tags = generate_ai_tags(filename)
 
-        # AI Summary (PDF)
+        # PDF Summary
         summary = None
         if filename.lower().endswith(".pdf"):
             summary = summarize_pdf(temp_path)
@@ -269,7 +321,6 @@ def rename_teacher_file(filename):
     for r in records:
         if r["filename"] == filename and r.get("uploaded_by") == session["username"]:
 
-            # Rename in S3
             try:
                 rename_file(filename, new_name)
             except Exception as e:
