@@ -1,9 +1,9 @@
 import json
 import os
 import hashlib
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AI_LOG_FILE = os.path.join(BASE_DIR, "ai_logs.json")
 
-USERS_FILE = os.path.join(BASE_DIR, "users.json")
 
 def load_users():
     if not os.path.exists(USERS_FILE):
