@@ -5,11 +5,12 @@ import os
 import json
 
 # Backend helpers
-from auth_backend import login_user, signup_user
+from auth_backend import login_user, signup_user, load_users  # <-- use correct loader
 from chatbot_backend import ask_ai
 from utils.ai_tags import generate_ai_tags
 from utils.storage_utils import upload_file_with_metadata, delete_file, rename_file
 from utils.pdf_utils import summarize_pdf
+from utils.ai_logs import load_ai_logs, save_ai_log
 
 load_dotenv()
 
@@ -32,34 +33,6 @@ def load_uploads():
 
 def save_uploads(data):
     with open(UPLOAD_RECORD, "w") as f:
-        json.dump(data, f, indent=4)
-
-
-# ============================================
-# 🔹 USER + AI LOG STORAGE HELPERS
-# ============================================
-
-USERS_RECORD = "users.json"
-AI_LOGS_RECORD = "ai_logs.json"
-
-def load_users():
-    if not os.path.exists(USERS_RECORD):
-        return []
-    with open(USERS_RECORD, "r") as f:
-        return json.load(f)
-
-def save_users(data):
-    with open(USERS_RECORD, "w") as f:
-        json.dump(data, f, indent=4)
-
-def load_ai_logs():
-    if not os.path.exists(AI_LOGS_RECORD):
-        return []
-    with open(AI_LOGS_RECORD, "r") as f:
-        return json.load(f)
-
-def save_ai_logs(data):
-    with open(AI_LOGS_RECORD, "w") as f:
         json.dump(data, f, indent=4)
 
 
@@ -162,23 +135,27 @@ def teacher_dashboard():
                            username=session["username"])
 
 
+# ============================================
+# 🔹 ADMIN DASHBOARD (FIXED)
+# ============================================
+
 @app.route("/dashboard/admin")
 @login_required("Admin")
 def admin_dashboard():
 
-    users = load_users()
+    users = load_users()  # from auth_backend
     files = load_uploads()
     ai_logs = load_ai_logs()
 
     return render_template(
         "admin_dashboard.html",
-        username=session["username"],
         total_users=len(users),
         total_files=len(files),
         ai_queries=len(ai_logs),
         users=users,
         files=files,
-        ai_logs=ai_logs
+        ai_logs=ai_logs,
+        username=session["username"]
     )
 
 
@@ -201,13 +178,7 @@ def api_chat():
     answer = ask_ai(question)
 
     # Save AI log
-    logs = load_ai_logs()
-    logs.append({
-        "user": session["username"],
-        "question": question,
-        "answer": answer
-    })
-    save_ai_logs(logs)
+    save_ai_log(question, answer, session["username"])
 
     return {"answer": answer}
 
@@ -227,24 +198,16 @@ def upload_page():
 
         filename = secure_filename(file.filename)
 
-        # temporary local save
         temp_folder = "uploads"
         os.makedirs(temp_folder, exist_ok=True)
         temp_path = os.path.join(temp_folder, filename)
         file.save(temp_path)
 
-        # Upload to S3 -> CloudFront URL
         s3_url = upload_file_with_metadata(temp_path, key=filename)
-
-        # AI tags
         tags = generate_ai_tags(filename)
 
-        # PDF Summary
-        summary = None
-        if filename.lower().endswith(".pdf"):
-            summary = summarize_pdf(temp_path)
+        summary = summarize_pdf(temp_path) if filename.lower().endswith(".pdf") else None
 
-        # Save metadata
         records = load_uploads()
         records.append({
             "uploaded_by": session["username"],
@@ -264,14 +227,13 @@ def upload_page():
 
 
 # ============================================
-# 🔹 VIEW ALL FILES (Students + Admin)
+# 🔹 VIEW ALL FILES
 # ============================================
 
 @app.route("/files")
 @login_required()
 def files_page():
-    records = load_uploads()
-    return render_template("files.html", files=records)
+    return render_template("files.html", files=load_uploads())
 
 
 # ============================================
@@ -281,8 +243,7 @@ def files_page():
 @app.route("/teacher/files")
 @login_required("Teacher")
 def teacher_files():
-    all_records = load_uploads()
-    mine = [r for r in all_records if r.get("uploaded_by") == session["username"]]
+    mine = [r for r in load_uploads() if r.get("uploaded_by") == session["username"]]
     return render_template("teacher_files.html", files=mine)
 
 
@@ -300,10 +261,7 @@ def delete_teacher_file(filename):
         new_records.append(r)
 
     if to_delete:
-        try:
-            delete_file(to_delete["filename"])
-        except Exception as e:
-            print("Delete Error:", e)
+        delete_file(to_delete["filename"])
 
         save_uploads(new_records)
 
@@ -320,17 +278,10 @@ def rename_teacher_file(filename):
     records = load_uploads()
     for r in records:
         if r["filename"] == filename and r.get("uploaded_by") == session["username"]:
-
-            try:
-                rename_file(filename, new_name)
-            except Exception as e:
-                print("Rename Error:", e)
-                return redirect(url_for("teacher_files"))
-
+            rename_file(filename, new_name)
             r["filename"] = new_name
             r["url"] = upload_file_with_metadata("uploads/" + new_name, key=new_name)
             r["tags"] = generate_ai_tags(new_name)
-
             break
 
     save_uploads(records)
@@ -338,7 +289,7 @@ def rename_teacher_file(filename):
 
 
 # ============================================
-# 🔹 MAIN ENTRY
+# MAIN
 # ============================================
 
 if __name__ == "__main__":
