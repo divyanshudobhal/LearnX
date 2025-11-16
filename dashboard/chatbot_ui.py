@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Load API Key from .env (SAFE)
-api_key = os.getenv("GEMINI_API_KEY")
+api_key = os.getenv("AIzaSyD952mhQGB06f6GEJKU5ayuB1y3ek_8SxI")
 genai.configure(api_key=api_key)
 
 class ChatbotUI(ctk.CTkToplevel):
