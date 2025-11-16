@@ -1,73 +1,48 @@
-import json
-import os
 import hashlib
+from database import get_connection
 
-# ------------------------------------
-# Correct path ⇒ Root / users.json
-# ------------------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-USERS_FILE = os.path.join(BASE_DIR, "users.json")
-
-# ------------------------------------
-# Load Users
-# ------------------------------------
-def load_users():
-    """Load all users safely."""
-    if not os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "w") as f:
-            json.dump({}, f)
-        return {}
-
-    try:
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
-    except json.JSONDecodeError:
-        return {}
-
-# ------------------------------------
-# Save Users
-# ------------------------------------
-def save_users(users):
-    """Save all users back to JSON."""
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=4)
-
-# ------------------------------------
-# Password Hashing
-# ------------------------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# ------------------------------------
-# Signup Logic
-# ------------------------------------
 def signup_user(username, password, role):
-    users = load_users()
+    conn = get_connection()
+    cur = conn.cursor()
 
-    if username in users:
-        return False, "❌ Username already exists!"
+    cur.execute("SELECT username FROM users WHERE username=?", (username,))
+    if cur.fetchone():
+        return False, "Username already exists!"
 
-    users[username] = {
-        "password": hash_password(password),
-        "role": role
-    }
+    cur.execute(
+        "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+        (username, hash_password(password), role)
+    )
+    conn.commit()
+    conn.close()
 
-    save_users(users)
-    return True, f"✅ Signup successful! Registered as {role}."
+    return True, "Signup successful!"
 
-# ------------------------------------
-# Login Logic
-# ------------------------------------
 def login_user(username, password):
-    users = load_users()
+    conn = get_connection()
+    cur = conn.cursor()
 
-    if username not in users:
-        return False, "❌ User not found!", None
+    cur.execute("SELECT username, password, role FROM users WHERE username=?", (username,))
+    row = cur.fetchone()
 
-    if users[username]["password"] != hash_password(password):
-        return False, "⚠ Incorrect password!", None
+    if not row:
+        return False, "User not found!", None
 
-    return True, "Login successful!", {
-        "username": username,
-        "role": users[username]["role"]
-    }
+    if row[1] != hash_password(password):
+        return False, "Incorrect password!", None
+
+    conn.close()
+    return True, "Login successful!", {"username": row[0], "role": row[2]}
+
+def load_users():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT username, role FROM users")
+    rows = cur.fetchall()
+    conn.close()
+
+    return [{"username": r[0], "role": r[1]} for r in rows]
