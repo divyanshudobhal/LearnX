@@ -1,8 +1,8 @@
 import json
 import os
 import hashlib
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 
 def load_users():
