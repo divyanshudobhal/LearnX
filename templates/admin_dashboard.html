@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard • LearnX{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl w-full">
+  <h1 class="text-2xl font-semibold mb-2">Admin Panel 🛡️</h1>
+  <p class="text-sm text-slate-400 mb-6">
+    Manage users, roles, and platform configuration.
+  </p>
+
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+      <h2 class="font-semibold mb-1 text-sm">Users</h2>
+      <p class="text-xs text-slate-400">Later: show users from your JSON / DB.</p>
+    </div>
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+      <h2 class="font-semibold mb-1 text-sm">AI Settings</h2>
+      <p class="text-xs text-slate-400">Control chatbot behaviour & limits.</p>
+    </div>
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+      <h2 class="font-semibold mb-1 text-sm">Storage</h2>
+      <p class="text-xs text-slate-400">Integrate with S3 / storage_utils here.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
