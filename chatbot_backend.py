@@ -4,18 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Load API key from environment
+# Load your API key
 api_key = os.getenv("GEMINI_API_KEY")
-
-# Safety check
-if not api_key:
-    raise Exception("❌ Error: GEMINI_API_KEY is missing. Add it in Render environment variables.")
-
-# Configure Gemini
 genai.configure(api_key=api_key)
 
-# Official working model
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Correct model path for v1beta API
+MODEL_NAME = "models/gemini-1.5-flash"
+
+model = genai.GenerativeModel(MODEL_NAME)
 
 def ask_ai(question: str):
     if not question.strip():
