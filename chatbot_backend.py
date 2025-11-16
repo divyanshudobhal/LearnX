@@ -4,11 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Load Gemini API Key
-api_key = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
+# Load key (safe)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Correct Model Name
+# 🟢 WORKING MODEL (official)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 def ask_ai(question: str):
@@ -17,6 +16,6 @@ def ask_ai(question: str):
 
     try:
         response = model.generate_content(question)
-        return response.text
+        return response.text.strip()
     except Exception as e:
-        return f"AI Error: {str(e)}"
+        return f"AI Error: {e}"
