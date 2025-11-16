@@ -17,12 +17,20 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-key")
 
+# ======================================================
+# FIXED PATH CONFIG  (IMPORTANT FOR SAVING FILES)
+# ======================================================
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# ---------------------------------------------------
-# Upload Metadata
-# ---------------------------------------------------
-UPLOAD_RECORD = "uploads.json"
+UPLOAD_RECORD = os.path.join(BASE_DIR, "uploads.json")
+AI_LOGS_RECORD = os.path.join(BASE_DIR, "ai_logs.json")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# ======================================================
+# LOAD & SAVE Upload Metadata
+# ======================================================
 def load_uploads():
     if not os.path.exists(UPLOAD_RECORD):
         return []
@@ -34,9 +42,9 @@ def save_uploads(data):
         json.dump(data, f, indent=4)
 
 
-# ---------------------------------------------------
+# ======================================================
 # Login Required Decorator
-# ---------------------------------------------------
+# ======================================================
 def login_required(role=None):
     def wrapper(fn):
         def decorated(*args, **kwargs):
@@ -50,16 +58,16 @@ def login_required(role=None):
     return wrapper
 
 
-# ---------------------------------------------------
+# ======================================================
 # ROUTES
-# ---------------------------------------------------
+# ======================================================
 
 @app.route("/")
 def home():
     return redirect(url_for("login"))
 
 
-# ---------- LOGIN ----------
+# --------------------- LOGIN ---------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -77,7 +85,7 @@ def login():
     return render_template("login.html")
 
 
-# ---------- SIGNUP ----------
+# --------------------- SIGNUP ---------------------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -100,7 +108,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ---------- DASHBOARD ROUTING ----------
+# --------------------- DASHBOARD Logic ---------------------
 @app.route("/dashboard")
 @login_required()
 def dashboard():
@@ -112,16 +120,18 @@ def dashboard():
     return redirect(url_for("student_dashboard"))
 
 
-# ---------- STUDENT ----------
+# --------------------- STUDENT ---------------------
 @app.route("/dashboard/student")
 @login_required("Student")
 def student_dashboard():
-    return render_template("student_dashboard.html",
-                           username=session["username"],
-                           files=load_uploads())
+    return render_template(
+        "student_dashboard.html",
+        username=session["username"],
+        files=load_uploads()
+    )
 
 
-# ---------- TEACHER ----------
+# --------------------- TEACHER ---------------------
 @app.route("/dashboard/teacher")
 @login_required("Teacher")
 def teacher_dashboard():
@@ -129,11 +139,10 @@ def teacher_dashboard():
                            username=session["username"])
 
 
-# ---------- ADMIN ----------
+# --------------------- ADMIN ---------------------
 @app.route("/dashboard/admin")
 @login_required("Admin")
 def admin_dashboard():
-
     users = load_users()
     files = load_uploads()
     ai_logs = load_ai_logs()
@@ -150,11 +159,14 @@ def admin_dashboard():
     )
 
 
-# ---------- CHATBOT ----------
+# ======================================================
+# CHATBOT
+# ======================================================
 @app.route("/chatbot")
 @login_required()
 def chatbot():
     return render_template("chatbot.html")
+
 
 @app.post("/api/chat")
 @login_required()
@@ -165,7 +177,9 @@ def api_chat():
     return {"answer": ans}
 
 
-# ---------- UPLOADS ----------
+# ======================================================
+# UPLOAD
+# ======================================================
 @app.route("/upload", methods=["GET", "POST"])
 @login_required("Teacher")
 def upload_page():
@@ -175,10 +189,7 @@ def upload_page():
             return render_template("upload.html", error="Select a file!")
 
         filename = secure_filename(file.filename)
-        temp = "uploads"
-        os.makedirs(temp, exist_ok=True)
-
-        temp_path = os.path.join(temp, filename)
+        temp_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(temp_path)
 
         s3_url = upload_file_with_metadata(temp_path, key=filename)
@@ -197,72 +208,53 @@ def upload_page():
         save_uploads(records)
 
         os.remove(temp_path)
-
         return render_template("upload_success.html", url=s3_url, tags=tags)
 
     return render_template("upload.html")
 
 
-# ---------- FILES ----------
+# ======================================================
+# FILE SEARCH + FILTER
+# ======================================================
 @app.route("/files")
 @login_required()
 def files_page():
     files = load_uploads()
 
-    # Read query parameters
     search = request.args.get("search", "").strip().lower()
     file_type = request.args.get("type", "all").lower()
 
-    # -----------------------------
-    # SEARCH FILTER
-    # -----------------------------
+    # ---- search ----
     if search:
         files = [
             f for f in files
             if search in f["filename"].lower()
-            or any(search in tag.lower() for tag in f.get("tags", []))
+            or any(search in t.lower() for t in f.get("tags", []))
         ]
 
-    # -----------------------------
-    # TYPE FILTER
-    # -----------------------------
+    # ---- type filter ----
     if file_type != "all":
 
-        def match_type(file):
+        def match(file):
             name = file["filename"].lower()
 
-            if file_type == "pdf":
-                return name.endswith(".pdf")
-
-            if file_type == "image":
-                return any(name.endswith(ext) for ext in
-                           [".jpg", ".jpeg", ".png", ".gif"])
-
-            if file_type == "video":
-                return any(name.endswith(ext) for ext in
-                           [".mp4", ".mov", ".avi", ".mkv"])
-
-            if file_type == "doc":
-                return any(name.endswith(ext) for ext in
-                           [".doc", ".docx", ".txt", ".ppt", ".pptx", ".xls", ".xlsx"])
-
-            if file_type == "other":
-                return True  # Everything not matched above
+            if file_type == "pdf": return name.endswith(".pdf")
+            if file_type == "image": return any(name.endswith(e) for e in [".jpg",".jpeg",".png",".gif"])
+            if file_type == "video": return any(name.endswith(e) for e in [".mp4",".mov",".avi",".mkv"])
+            if file_type == "doc": return any(name.endswith(e) for e in [".doc",".docx",".txt",".ppt",".pptx",".xls",".xlsx"])
 
             return True
 
-        files = [f for f in files if match_type(f)]
+        files = [f for f in files if match(f)]
 
-    # Render the student dashboard with filtered results
-    return render_template(
-        "student_dashboard.html",
-        files=files,
-        username=session["username"]
-    )
+    return render_template("student_dashboard.html",
+                           files=files,
+                           username=session["username"])
 
 
-
-# ---------- TEACHER FILE MANAGER ----------
+# ======================================================
+# TEACHER FILE MANAGER
+# ======================================================
 @app.route("/teacher/files")
 @login_required("Teacher")
 def teacher_files():
@@ -270,20 +262,18 @@ def teacher_files():
     return render_template("teacher_files.html", files=mine)
 
 
-# ---------- DELETE ----------
 @app.post("/teacher/files/delete/<filename>")
 @login_required("Teacher")
 def delete_teacher_file(filename):
     records = load_uploads()
-    records = [r for r in records if not (r["filename"] == filename and r["uploaded_by"] == session["username"])]
+    records = [r for r in records
+               if not (r["filename"] == filename and r["uploaded_by"] == session["username"])]
 
     delete_file(filename)
     save_uploads(records)
-
     return redirect(url_for("teacher_files"))
 
 
-# ---------- RENAME ----------
 @app.post("/teacher/files/rename/<filename>")
 @login_required("Teacher")
 def rename_teacher_file(filename):
@@ -303,6 +293,8 @@ def rename_teacher_file(filename):
     return redirect(url_for("teacher_files"))
 
 
-# ---------- MAIN ----------
+# ======================================================
+# MAIN
+# ======================================================
 if __name__ == "__main__":
     app.run(debug=True)
