@@ -5,7 +5,8 @@ import os
 import json
 
 # Backend helpers
-from auth_backend import login_user, signup_user, load_users  # <-- use correct loader
+from auth.auth_backend import login_user, signup_user
+from auth.auth_backend import load_users
 from chatbot_backend import ask_ai
 from utils.ai_tags import generate_ai_tags
 from utils.storage_utils import upload_file_with_metadata, delete_file, rename_file
