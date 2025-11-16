@@ -2,7 +2,7 @@
     {
         "uploaded_by": "div",
         "filename": "3rd-semester-syllabus.pdf",
-        "url": "s3://e-learning-platform-files/3rd-semester-syllabus.pdf",
+        "url": "https://e-learning-platform-files.s3.eu-north-1.amazonaws.com/3rd-semester-syllabus.pdf",
         "tags": [
                    
         ]
@@ -28,7 +28,7 @@
     {
         "uploaded_by": "div",
         "filename": "D.jpg",
-        "url": "s3://e-learning-platform-files/D.jpg",
+        "url": "https://e-learning-platform-files.s3.eu-north-1.amazonaws.com/D.jpg",
         "tags": [
                    
         ]
@@ -37,7 +37,7 @@
       {
         "uploaded_by": "div",
         "filename": "Spidy",
-        "url": " s3://e-learning-platform-files/wallhaven-qzr8yq_2190x1232.png",
+        "url": "https://e-learning-platform-files.s3.eu-north-1.amazonaws.com/wallhaven-qzr8yq_2190x1232.png",
         "tags": [
                    
         ]
