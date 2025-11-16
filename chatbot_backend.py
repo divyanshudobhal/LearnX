@@ -2,12 +2,16 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 
+# Load .env file
 load_dotenv()
 
-# Load key (safe)
-genai.configure(api_key=os.getenv("AIzaSyD952mhQGB06f6GEJKU5ayuB1y3ek_8SxI"))
+# Correct way: load API_KEY from environment variable
+api_key = os.getenv("GEMINI_API_KEY")
 
-# 🟢 WORKING MODEL (official)
+# Configure Gemini safely
+genai.configure(api_key=api_key)
+
+# Use official model name
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 def ask_ai(question: str):
