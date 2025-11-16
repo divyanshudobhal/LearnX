@@ -2,25 +2,82 @@
 {% block title %}Admin Dashboard • LearnX{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl w-full">
-  <h1 class="text-2xl font-semibold mb-2">Admin Panel 🛡️</h1>
-  <p class="text-sm text-slate-400 mb-6">
-    Manage users, roles, and platform configuration.
-  </p>
+<div class="max-w-6xl w-full">
 
-  <div class="grid md:grid-cols-3 gap-4">
-    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
-      <h2 class="font-semibold mb-1 text-sm">Users</h2>
-      <p class="text-xs text-slate-400">Later: show users from your JSON / DB.</p>
+  <!-- Header -->
+  <h1 class="text-3xl font-semibold mb-2">Admin Dashboard 🛡️</h1>
+  <p class="text-sm text-slate-400 mb-8">Monitor platform, users, files & AI usage.</p>
+
+  <!-- Stats Row -->
+  <div class="grid md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+      <p class="text-xs text-slate-400 mb-1">Total Users</p>
+      <h2 class="text-2xl font-bold text-blue-400">{{ total_users }}</h2>
     </div>
-    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
-      <h2 class="font-semibold mb-1 text-sm">AI Settings</h2>
-      <p class="text-xs text-slate-400">Control chatbot behaviour & limits.</p>
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+      <p class="text-xs text-slate-400 mb-1">Uploaded Files</p>
+      <h2 class="text-2xl font-bold text-purple-400">{{ total_files }}</h2>
     </div>
-    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
-      <h2 class="font-semibold mb-1 text-sm">Storage</h2>
-      <p class="text-xs text-slate-400">Integrate with S3 / storage_utils here.</p>
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+      <p class="text-xs text-slate-400 mb-1">AI Queries</p>
+      <h2 class="text-2xl font-bold text-green-400">{{ ai_queries }}</h2>
     </div>
   </div>
+
+  <!-- Management Panels -->
+  <div class="grid md:grid-cols-2 gap-6">
+
+    <!-- User Management -->
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+      <h2 class="text-lg font-semibold mb-3">User Management 👥</h2>
+      <p class="text-sm text-slate-400 mb-3">View, sort, and remove users.</p>
+
+      <div class="bg-slate-800/40 rounded-xl p-3 mb-3">
+        {% for u in users %}
+          <div class="flex items-center justify-between py-2 border-b border-slate-800/60">
+            <div>
+              <p class="font-medium">{{ u.username }}</p>
+              <p class="text-xs text-slate-400">{{ u.role }}</p>
+            </div>
+            <form method="POST" action="/admin/delete_user/{{ u.username }}">
+              <button class="text-red-400 hover:text-red-300 text-sm">Remove</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- File Storage -->
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+      <h2 class="text-lg font-semibold mb-3">Storage Overview 📦</h2>
+      <p class="text-sm text-slate-400 mb-3">S3 file uploads & metadata.</p>
+
+      <div class="bg-slate-800/40 rounded-xl p-3">
+        {% for f in files %}
+          <div class="py-2 border-b border-slate-800/60">
+            <p class="text-sm font-medium">{{ f.filename }}</p>
+            <p class="text-xs text-slate-500">{{ f.uploaded_by }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AI Stats -->
+  <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 mt-8">
+    <h2 class="text-lg font-semibold mb-2">AI System Logs 🤖</h2>
+    <p class="text-sm text-slate-400 mb-4">Recent AI queries & responses summary.</p>
+
+    <div class="space-y-3">
+      {% for q in ai_logs %}
+      <div class="bg-slate-800/40 rounded-xl p-3 border border-slate-800">
+        <p class="text-blue-300 text-sm font-medium">Q: {{ q.question }}</p>
+        <p class="text-xs text-slate-400 mt-1 truncate">A: {{ q.answer[:80] }}...</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
 </div>
 {% endblock %}
