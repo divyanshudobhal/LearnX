@@ -24,8 +24,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 UPLOAD_RECORD = os.path.join(BASE_DIR, "uploads.json")
-AI_LOGS_RECORD = os.path.join(BASE_DIR, "ai_logs.json")  # used inside utils.ai_logs
+AI_LOGS_RECORD = os.path.join(BASE_DIR, "ai_logs.json")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
